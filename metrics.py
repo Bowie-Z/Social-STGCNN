@@ -66,6 +66,7 @@ def seq_to_nodes(seq_):
             
     return V.squeeze()
 
+
 def nodes_rel_to_nodes_abs(nodes,init_node):
     nodes_ = np.zeros_like(nodes)
     for s in range(nodes.shape[0]):
@@ -74,13 +75,15 @@ def nodes_rel_to_nodes_abs(nodes,init_node):
 
     return nodes_.squeeze()
 
+
 def closer_to_zero(current,new_v):
     dec =  min([(abs(current),current),(abs(new_v),new_v)])[1]
     if dec != current:
         return True
     else: 
         return False
-        
+
+
 def bivariate_loss(V_pred,V_trgt):
     #mux, muy, sx, sy, corr
     #assert V_pred.shape == V_trgt.shape
