@@ -64,7 +64,7 @@ pip install -r requirements.txt
 ### Using the code:
 To use the pretrained models at `checkpoint/` and evaluate the models performance run:
 ```bash
-test.py
+evalutate.py
 ```
 
 To train a model for each data set with the best configuration as in the paper, simply run:

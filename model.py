@@ -1,16 +1,5 @@
-import os
-import math
-import sys
-
 import torch
 import torch.nn as nn
-import numpy as np
-import torch.nn.functional as Func
-from torch.nn import init
-from torch.nn.parameter import Parameter
-from torch.nn.modules.module import Module
-
-import torch.optim as optim
 
 
 class ConvTemporalGraphical(nn.Module):
@@ -37,8 +26,7 @@ class ConvTemporalGraphical(nn.Module):
             :math:`V` is the number of graph nodes. 
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1,
-                 bias=True):
+    def __init__(self, in_channels, out_channels, kernel_size, t_kernel_size=1, t_stride=1, t_padding=0, t_dilation=1, bias=True):
         super(ConvTemporalGraphical, self).__init__()
         self.kernel_size = kernel_size
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=(t_kernel_size, 1), padding=(t_padding, 0),
@@ -63,7 +51,7 @@ class st_gcn(nn.Module):
     Shape:
         - Input[0]: Input graph sequence in :math:`(N, in_channels, T_{in}, V)` format
         - Input[1]: Input graph adjacency matrix in :math:`(K, V, V)` format
-        - Output[0]: Outpu graph sequence in :math:`(N, out_channels, T_{out}, V)` format
+        - Output[0]: Output graph sequence in :math:`(N, out_channels, T_{out}, V)` format
         - Output[1]: Graph adjacency matrix for output data in :math:`(K, V, V)` format
         where
             :math:`N` is a batch size,
@@ -114,7 +102,7 @@ class st_gcn(nn.Module):
 
 
 class social_stgcnn(nn.Module):
-    def __init__(self, n_stgcnn=1, n_txpcnn=1, input_feat=2, output_feat=5, seq_len=8, pred_seq_len=12, kernel_size=3):
+    def __init__(self, n_stgcnn=1, n_txpcnn=1, input_feat=2, output_feat=5, seq_len=6, pred_seq_len=8, kernel_size=3):
         super(social_stgcnn, self).__init__()
         self.n_stgcnn = n_stgcnn
         self.n_txpcnn = n_txpcnn
@@ -125,6 +113,8 @@ class social_stgcnn(nn.Module):
             self.st_gcns.append(st_gcn(output_feat, output_feat, (kernel_size, seq_len)))
 
         self.tpcnns = nn.ModuleList()
+        print(seq_len)
+        print(pred_seq_len)
         self.tpcnns.append(nn.Conv2d(seq_len, pred_seq_len, 3, padding=1))
         for j in range(1, self.n_txpcnn):  # n_txpcnn: layers of txpcnn
             self.tpcnns.append(nn.Conv2d(pred_seq_len, pred_seq_len, 3, padding=1))
@@ -139,9 +129,11 @@ class social_stgcnn(nn.Module):
 
         for k in range(self.n_stgcnn):
             v, a = self.st_gcns[k](v, a)
+        # v: batch_size(1), output_channels(5), input_len(6), graph_nodes
 
         v = v.view(v.shape[0], v.shape[2], v.shape[1], v.shape[3])
         v = self.prelus[0](self.tpcnns[0](v))
+        # v: batch_size(1), output_len(8), output_channels(5), graph_nodes
 
         for k in range(1, self.n_txpcnn - 1):
             v = self.prelus[k](self.tpcnns[k](v)) + v

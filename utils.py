@@ -1,27 +1,17 @@
 import os
-import math
-import sys
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+from math import sqrt, ceil
 
 import torch
-import torch.nn as nn
 import numpy as np
-import torch.nn.functional as Func
-from torch.nn import init
-from torch.nn.parameter import Parameter
-from torch.nn.modules.module import Module
-
-import torch.optim as optim
 
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from numpy import linalg as LA
 import networkx as nx
 from tqdm import tqdm
-import time
 
 
 def anorm(p1, p2):
-    NORM = math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+    NORM = sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
     if NORM == 0:
         return 0
     return 1 / (NORM)
@@ -87,8 +77,7 @@ def read_file(_path, delim='\t'):
 class TrajectoryDataset(Dataset):
     """Dataloader for the Trajectory datasets"""
 
-    def __init__(
-            self, data_dir, obs_len=8, pred_len=8, skip=1, threshold=0.002,
+    def __init__(self, data_dir, obs_len=6, pred_len=6, skip=1, threshold=0.002,
             min_ped=1, delim='\t', norm_lap_matr=True):
         """
         Args:
@@ -126,8 +115,7 @@ class TrajectoryDataset(Dataset):
             frame_data = []
             for frame in frames:
                 frame_data.append(data[frame == data[:, 0], :])  # get all data of a certain frame
-            num_sequences = int(
-                math.ceil((len(frames) - self.seq_len + 1) / skip))  # number of utilized sequences in all data
+            num_sequences = int(ceil((len(frames) - self.seq_len + 1) / skip))  # number of utilized sequences in all data
 
             for idx in range(0, num_sequences * self.skip + 1, skip):  # 处理一个历史+未来序列中所有行人的轨迹
                 curr_seq_data = np.concatenate(frame_data[idx:idx + self.seq_len], axis=0)
@@ -144,11 +132,11 @@ class TrajectoryDataset(Dataset):
                     curr_ped_seq = curr_seq_data[curr_seq_data[:, 1] == ped_id, :]  # 单个行人的轨迹
                     curr_ped_seq = np.around(curr_ped_seq, decimals=4)  # 保留四位小数
                     pad_front = frames.index(curr_ped_seq[0, 0]) - idx
-                    pad_end = frames.index(curr_ped_seq[-1, 0]) - idx + 1
+                    # pad_end = frames.index(curr_ped_seq[-1, 0]) - idx + 1
+                    pad_end = pad_front + len(curr_ped_seq)
                     if pad_end - pad_front != self.seq_len:
                         continue
-                    curr_ped_seq = np.transpose(curr_ped_seq[:, 2:])
-                    curr_ped_seq = curr_ped_seq
+                    curr_ped_seq = np.transpose(curr_ped_seq[:, 3:5])  # coordinates here
                     # Make coordinates relative
                     rel_curr_ped_seq = np.zeros(curr_ped_seq.shape)
                     rel_curr_ped_seq[:, 1:] = curr_ped_seq[:, 1:] - curr_ped_seq[:, :-1]
