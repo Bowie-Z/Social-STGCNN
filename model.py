@@ -102,7 +102,7 @@ class st_gcn(nn.Module):
 
 
 class social_stgcnn(nn.Module):
-    def __init__(self, n_stgcnn=1, n_txpcnn=1, input_feat=2, output_feat=5, seq_len=6, pred_seq_len=8, kernel_size=3):
+    def __init__(self, n_stgcnn=1, n_txpcnn=1, input_feat=2, output_feat=5, seq_len=6, pred_seq_len=6, kernel_size=3):
         super(social_stgcnn, self).__init__()
         self.n_stgcnn = n_stgcnn
         self.n_txpcnn = n_txpcnn
@@ -113,8 +113,6 @@ class social_stgcnn(nn.Module):
             self.st_gcns.append(st_gcn(output_feat, output_feat, (kernel_size, seq_len)))
 
         self.tpcnns = nn.ModuleList()
-        print(seq_len)
-        print(pred_seq_len)
         self.tpcnns.append(nn.Conv2d(seq_len, pred_seq_len, 3, padding=1))
         for j in range(1, self.n_txpcnn):  # n_txpcnn: layers of txpcnn
             self.tpcnns.append(nn.Conv2d(pred_seq_len, pred_seq_len, 3, padding=1))

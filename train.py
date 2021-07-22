@@ -17,12 +17,12 @@ parser.add_argument('--kernel_size', type=int, default=3)
 
 # Data specifc paremeters
 parser.add_argument('--obs_seq_len', type=int, default=6)
-parser.add_argument('--pred_seq_len', type=int, default=8)  # ApolloScape: 2fps
+parser.add_argument('--pred_seq_len', type=int, default=6)  # ApolloScape: 2fps
 parser.add_argument('--dataset', default='ApolloScape/data')
 
 # Training specifc parameters
 parser.add_argument('--batch_size', type=int, default=128, help='minibatch size')
-parser.add_argument('--num_epochs', type=int, default=5, help='number of epochs')
+parser.add_argument('--num_epochs', type=int, default=150, help='number of epochs')
 parser.add_argument('--clip_grad', type=float, default=None, help='gadient clipping')
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--lr_sh_rate', type=int, default=150, help='number of steps to drop the lr')
