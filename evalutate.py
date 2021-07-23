@@ -79,7 +79,6 @@ def evaluate(KSTEPS=20):
 
         for k in range(KSTEPS):
             # 多次采样，取使ade、fde最小的预测结果
-            pred_all = []
             V_pred = mvnormal.sample()
             # V_pred = seq_to_nodes(pred_traj_gt.data.numpy().copy())
             V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze().copy(), V_x[-1, :, :].copy())
@@ -97,15 +96,12 @@ def evaluate(KSTEPS=20):
                 obsrvs.append(V_x_rel_to_abs[:, n:n + 1, :])
                 number_of.append(1)
 
-                pred_all.append(pred)
                 ade_ls[n].append(ade(pred, target, number_of))
                 fde_ls[n].append(fde(pred, target, number_of))
 
         for n in range(num_of_objs):
             ade_bigls.append(min(ade_ls[n]))
-            print(ade_ls[n].index(min(ade_ls[n])))
             fde_bigls.append(min(fde_ls[n]))
-            print(ade_ls[n].index(min(fde_ls[n])))
 
     ade_ = sum(ade_bigls) / len(ade_bigls)
     fde_ = sum(fde_bigls) / len(fde_bigls)

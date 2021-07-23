@@ -209,7 +209,7 @@ class TrajectoryDataset(Dataset):
 class DatasetForResult(Dataset):
     """Dataloader for the Trajectory datasets when output results"""
 
-    def __init__(self, data_dir, obs_len=6, pred_len=6, skip=1, threshold=0.002,
+    def __init__(self, data_dir, obs_len=6, pred_len=6, skip=2, threshold=0.002,
                  min_ped=1, delim='\t', norm_lap_matr=True):
         """
         Args:
@@ -243,17 +243,15 @@ class DatasetForResult(Dataset):
             frame_data = []
             for frame in frames:
                 frame_data.append(data[frame == data[:, 0], :])  # get all data of a certain frame
-            num_sequences = int(ceil((len(frames) - self.seq_len + 1) / skip))  # number of utilized sequences in all data
+            num_sequences = int(ceil((len(frames) - self.obs_len + 1) / skip))  # number of utilized sequences in all data
 
-            for idx in range(0, num_sequences * self.skip + 1, skip):  # 处理一个历史序列中所有行人的轨迹
+            for idx in range(0, num_sequences, skip):  # 处理一个历史序列中所有行人的轨迹
                 curr_obs_seq_data = np.concatenate(frame_data[idx:idx + self.obs_len], axis=0)
                 # curr_obs_seq_data是从idx到idx+obs_len的所有帧中所有行人的轨迹
                 peds_in_curr_seq = np.unique(curr_obs_seq_data[:, 1])  # 当前序列中所有行人的编号
                 self.max_peds_in_frame = max(self.max_peds_in_frame, len(peds_in_curr_seq))
-                # 寻找具有最多行人的帧，其行人数目即图的节点数
                 curr_obs_seq_rel = np.zeros((len(peds_in_curr_seq), 2, self.obs_len))
                 curr_obs_seq = np.zeros((len(peds_in_curr_seq), 2, self.obs_len))
-                curr_loss_mask = np.zeros((len(peds_in_curr_seq), self.obs_len))
                 num_peds_considered = 0
                 _non_linear_ped = []
                 for _, ped_id in enumerate(peds_in_curr_seq):  # 处理单个行人的轨迹
@@ -273,7 +271,6 @@ class DatasetForResult(Dataset):
                     curr_obs_seq_rel[_idx, :, pad_front:pad_end] = rel_curr_ped_obs_seq
                     # Linear vs Non-Linear Trajectory
                     _non_linear_ped.append(poly_fit(curr_ped_obs_seq, pred_len, threshold))
-                    curr_loss_mask[_idx, pad_front:pad_end] = 1
                     num_peds_considered += 1
 
                 if num_peds_considered > min_ped:

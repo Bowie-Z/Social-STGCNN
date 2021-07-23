@@ -1,6 +1,5 @@
 import pickle
 import glob
-import torch.distributions.multivariate_normal as torchdist
 from utils import *
 from metrics import *
 from model import social_stgcnn
@@ -36,23 +35,20 @@ def show_res(KSTEPS=1):
         num_of_objs = obs_traj_rel.shape[1]
         V_pred = V_pred[:, :num_of_objs, :]
 
-        normx =  V_pred[:,:,0:1]
-        normy =  V_pred[:,:,1:2]
-
-
         ### Rel to abs
         ##obs_traj.shape = torch.Size([1, 6, 2, 8]) Batch, Ped ID, x|y, Seq Len
 
         # Now sample 20 samples
         V_x = seq_to_nodes(obs_traj.data.cpu().numpy().copy())
-        print(V_x.shape)
+        # print(V_x.shape)
         V_x_rel_to_abs = nodes_rel_to_nodes_abs(V_obs.data.cpu().numpy().squeeze().copy(), V_x[0, :, :].copy())
+        V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze().copy(), V_x[-1, :, :].copy())
         # 历史轨迹和未来轨迹也是相对预测起始点的
 
         raw_data_dict[step] = {}
         raw_data_dict[step]['obs'] = copy.deepcopy(V_x_rel_to_abs)
         raw_data_dict[step]['pred'] = []
-        raw_data_dict[step]['pred'].append(copy.deepcopy(V_x_rel_to_abs))
+        raw_data_dict[step]['pred'].append(copy.deepcopy(V_pred_rel_to_abs))
 
     return raw_data_dict
 
@@ -99,3 +95,4 @@ if __name__ == '__main__':
 
             print("Testing ....")
             raw_data_dic_ = show_res()
+            print("Finish.")
