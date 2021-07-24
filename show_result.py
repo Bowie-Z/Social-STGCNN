@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import copy
 
 
-def show_res(KSTEPS=1):
+def show_res():
     global loader_test, model
     model.eval()
     raw_data_dict = {}
@@ -32,15 +32,16 @@ def show_res(KSTEPS=1):
         # V_pred= torch.rand_like(V_tr).cuda()
 
         V_pred = V_pred.squeeze()
+        V_pred = V_pred[:, :, 0:2]
         num_of_objs = obs_traj_rel.shape[1]
         V_pred = V_pred[:, :num_of_objs, :]
 
         ### Rel to abs
-        ##obs_traj.shape = torch.Size([1, 6, 2, 8]) Batch, Ped ID, x|y, Seq Len
+        print(obs_traj.shape)
+        ##obs_traj.shape = torch.Size([1, nodes, 2, 6]) Batch, num_of_peds, x|y, Seq Len
 
-        # Now sample 20 samples
         V_x = seq_to_nodes(obs_traj.data.cpu().numpy().copy())
-        # print(V_x.shape)
+        print(V_x.shape)
         V_x_rel_to_abs = nodes_rel_to_nodes_abs(V_obs.data.cpu().numpy().squeeze().copy(), V_x[0, :, :].copy())
         V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze().copy(), V_x[-1, :, :].copy())
         # 历史轨迹和未来轨迹也是相对预测起始点的
@@ -84,7 +85,7 @@ if __name__ == '__main__':
             obs_seq_len = args.obs_seq_len
             data_set = '../datasets/' + args.dataset + '/'
 
-            dset_test = DatasetForResult(data_set + 'data/test/', obs_len=obs_seq_len, skip=1, norm_lap_matr=True)
+            dset_test = DatasetForResult(data_set + 'data/test/', obs_len=obs_seq_len, skip=6, norm_lap_matr=True)
             loader_test = DataLoader(dset_test, batch_size=1, shuffle=False, num_workers=1)
 
             # Defining the model
@@ -95,4 +96,5 @@ if __name__ == '__main__':
 
             print("Testing ....")
             raw_data_dic_ = show_res()
+            print(raw_data_dic_.keys())
             print("Finish.")

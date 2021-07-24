@@ -1,5 +1,4 @@
 import os
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 from math import sqrt, ceil
 
 import torch
@@ -8,6 +7,9 @@ import numpy as np
 from torch.utils.data import Dataset
 import networkx as nx
 from tqdm import tqdm
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
 
 
 def anorm(p1, p2):
@@ -78,7 +80,7 @@ class TrajectoryDataset(Dataset):
     """Dataloader for the Trajectory datasets"""
 
     def __init__(self, data_dir, obs_len=6, pred_len=6, skip=1, threshold=0.002,
-            min_ped=1, delim='\t', norm_lap_matr=True):
+                 min_ped=1, delim='\t', norm_lap_matr=True):
         """
         Args:
         - data_dir: Directory containing dataset files in the format
@@ -88,7 +90,7 @@ class TrajectoryDataset(Dataset):
         - skip: Number of frames to skip while making the dataset
         - threshold: Minimum error to be considered for non linear traj
         when using a linear predictor
-        - min_ped: Minimum number of pedestrians that should be in a seqeunce
+        - min_ped: Minimum number of pedestrians that should be in a sequence
         - delim: Delimiter in the dataset files
         """
         super(TrajectoryDataset, self).__init__()
@@ -115,7 +117,8 @@ class TrajectoryDataset(Dataset):
             frame_data = []
             for frame in frames:
                 frame_data.append(data[frame == data[:, 0], :])  # get all data of a certain frame
-            num_sequences = int(ceil((len(frames) - self.seq_len + 1) / skip))  # number of utilized sequences in all data
+            num_sequences = int(
+                ceil((len(frames) - self.seq_len + 1) / skip))  # number of utilized sequences in all data
 
             for idx in range(0, num_sequences * self.skip + 1, skip):  # 处理一个历史+未来序列中所有行人的轨迹
                 curr_seq_data = np.concatenate(frame_data[idx:idx + self.seq_len], axis=0)
@@ -209,7 +212,7 @@ class TrajectoryDataset(Dataset):
 class DatasetForResult(Dataset):
     """Dataloader for the Trajectory datasets when output results"""
 
-    def __init__(self, data_dir, obs_len=6, pred_len=6, skip=2, threshold=0.002,
+    def __init__(self, data_dir, obs_len=6, pred_len=6, skip=6, threshold=0.002,
                  min_ped=1, delim='\t', norm_lap_matr=True):
         """
         Args:
@@ -219,7 +222,7 @@ class DatasetForResult(Dataset):
         - skip: Number of frames to skip while making the dataset
         - threshold: Minimum error to be considered for non linear traj
         when using a linear predictor
-        - min_ped: Minimum number of pedestrians that should be in a seqeunce
+        - min_ped: Minimum number of pedestrians that should be in a sequence
         - delim: Delimiter in the dataset files
         """
         super(DatasetForResult, self).__init__()
@@ -243,7 +246,7 @@ class DatasetForResult(Dataset):
             frame_data = []
             for frame in frames:
                 frame_data.append(data[frame == data[:, 0], :])  # get all data of a certain frame
-            num_sequences = int(ceil((len(frames) - self.obs_len + 1) / skip))  # number of utilized sequences in all data
+            num_sequences = int(ceil((len(frames) - self.obs_len + 1)))  # number of utilized sequences in all data
 
             for idx in range(0, num_sequences, skip):  # 处理一个历史序列中所有行人的轨迹
                 curr_obs_seq_data = np.concatenate(frame_data[idx:idx + self.obs_len], axis=0)
@@ -251,7 +254,7 @@ class DatasetForResult(Dataset):
                 peds_in_curr_seq = np.unique(curr_obs_seq_data[:, 1])  # 当前序列中所有行人的编号
                 self.max_peds_in_frame = max(self.max_peds_in_frame, len(peds_in_curr_seq))
                 curr_obs_seq_rel = np.zeros((len(peds_in_curr_seq), 2, self.obs_len))
-                curr_obs_seq = np.zeros((len(peds_in_curr_seq), 2, self.obs_len))
+                curr_obs_seq = np.zeros((len(peds_in_curr_seq), 5, self.obs_len))
                 num_peds_considered = 0
                 _non_linear_ped = []
                 for _, ped_id in enumerate(peds_in_curr_seq):  # 处理单个行人的轨迹
@@ -262,15 +265,15 @@ class DatasetForResult(Dataset):
                     pad_end = pad_front + len(curr_ped_obs_seq)
                     if pad_end - pad_front != self.obs_len:
                         continue
-                    curr_ped_obs_seq = np.transpose(curr_ped_obs_seq[:, 3:5])  # get coordinates here
+                    curr_ped_obs_seq = np.transpose(curr_ped_obs_seq[:, 0:5])  # get frames, IDs and coordinates here
                     # Make coordinates relative
-                    rel_curr_ped_obs_seq = np.zeros(curr_ped_obs_seq.shape)
-                    rel_curr_ped_obs_seq[:, 1:] = curr_ped_obs_seq[:, 1:] - curr_ped_obs_seq[:, :-1]
+                    rel_curr_ped_obs_seq = np.zeros(curr_ped_obs_seq[3:5, :].shape)
+                    rel_curr_ped_obs_seq[:, 1:] = curr_ped_obs_seq[3:5, 1:] - curr_ped_obs_seq[3:5, :-1]
                     _idx = num_peds_considered
                     curr_obs_seq[_idx, :, pad_front:pad_end] = curr_ped_obs_seq
                     curr_obs_seq_rel[_idx, :, pad_front:pad_end] = rel_curr_ped_obs_seq
                     # Linear vs Non-Linear Trajectory
-                    _non_linear_ped.append(poly_fit(curr_ped_obs_seq, pred_len, threshold))
+                    _non_linear_ped.append(poly_fit(curr_ped_obs_seq[3:5, :], pred_len, threshold))
                     num_peds_considered += 1
 
                 if num_peds_considered > min_ped:
