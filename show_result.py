@@ -16,7 +16,7 @@ def show_res():
         step += 1
         # Get data
         batch = [tensor.cuda() for tensor in batch]
-        obs_traj, obs_traj_rel, non_linear_ped, V_obs, A_obs = batch
+        obs_traj, obs_traj_rel, non_linear_agent, V_obs, A_obs = batch
 
         # Forward
         # V_obs = batch,seq,node,feat
@@ -24,12 +24,9 @@ def show_res():
         V_obs_tmp = V_obs.permute(0, 3, 1, 2)
 
         V_pred, _ = model(V_obs_tmp, A_obs.squeeze())
-        # print(V_pred.shape)
         # torch.Size([1, 5, 6, 2])
-        # torch.Size([6, 2, 5])
         V_pred = V_pred.permute(0, 2, 3, 1)
         # torch.Size([1, 6, 2, 5])>>seq,node,feat
-        # V_pred= torch.rand_like(V_tr).cuda()
 
         V_pred = V_pred.squeeze()
         V_pred = V_pred[:, :, 0:2]
@@ -37,19 +34,19 @@ def show_res():
         V_pred = V_pred[:, :num_of_objs, :]
 
         ### Rel to abs
-        print(obs_traj.shape)
-        ##obs_traj.shape = torch.Size([1, nodes, 2, 6]) Batch, num_of_peds, x|y, Seq Len
-
-        V_x = seq_to_nodes(obs_traj.data.cpu().numpy().copy())
-        print(V_x.shape)
+        ##obs_traj.shape = torch.Size([1, nodes, 5, 6]) Batch, num_of_agents, frame_id|agent_id|type|x|y, Seq Len
+        id_and_type = obs_traj[:, :, 0:3, :].permute(0, 3, 1, 2).data.cpu().numpy().squeeze()
+        # print(id_and_type.shape)
+        V_x = seq_to_nodes(obs_traj[:, :, 3:5, :].data.cpu().numpy().copy())
         V_x_rel_to_abs = nodes_rel_to_nodes_abs(V_obs.data.cpu().numpy().squeeze().copy(), V_x[0, :, :].copy())
         V_pred_rel_to_abs = nodes_rel_to_nodes_abs(V_pred.data.cpu().numpy().squeeze().copy(), V_x[-1, :, :].copy())
-        # 历史轨迹和未来轨迹也是相对预测起始点的
+        # print(V_pred_rel_to_abs.shape)
+        show = np.concatenate([id_and_type, V_pred_rel_to_abs], axis=2)
 
         raw_data_dict[step] = {}
         raw_data_dict[step]['obs'] = copy.deepcopy(V_x_rel_to_abs)
         raw_data_dict[step]['pred'] = []
-        raw_data_dict[step]['pred'].append(copy.deepcopy(V_pred_rel_to_abs))
+        raw_data_dict[step]['pred'].append(copy.deepcopy(show))
 
     return raw_data_dict
 
@@ -96,5 +93,13 @@ if __name__ == '__main__':
 
             print("Testing ....")
             raw_data_dic_ = show_res()
-            print(raw_data_dic_.keys())
+
+            count = 0
+            for key in raw_data_dic_:
+                temp = raw_data_dic_[key]['pred']
+                for i in range(len(temp)):
+                    for j in range(temp[i].shape[0]):
+                        np.savetxt(str(count) + '.txt', temp[i][j, :, :], fmt="%4f", delimiter=' ')
+                        count += 1
+
             print("Finish.")
